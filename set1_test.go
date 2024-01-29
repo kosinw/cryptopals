@@ -40,7 +40,7 @@ func TestFixedXor1B(t *testing.T) {
 
 	fmt.Printf("Test (1B): fixed XOR ...\n")
 
-	actual := FixedXor(a, b)
+	actual := ToHex(FixedXor(FromHex(a), FromHex(b)))
 
 	if actual != c {
 		t.Errorf("\nexpected: %v\nactual  : %v\n", c, actual)
@@ -59,10 +59,11 @@ func TestSingleByteXor1C(t *testing.T) {
 	fmt.Printf("Test (1C): single-byte XOR ...\n")
 
 	f := BuildFreqTable(AliceCorpus)
-	plaintext, _, _ := f.XorDecrypt(a)
+	plaintext, _, _ := f.XorDecrypt(FromHex(a))
+	actual := ToHex(plaintext)
 
-	if plaintext != b {
-		t.Errorf("\nexpected: %v\nactual  : %v\n", b, plaintext)
+	if actual != b {
+		t.Errorf("\nexpected: %v\nactual  : %v\n", b, actual)
 	}
 
 	fmt.Printf("  ... Passed -- %v\n", time.Since(t0))

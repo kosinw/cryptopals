@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// max returns the greater of the two numbers between [a] and [b].
+// max returns the greater of the two numbers between a and b.
 func max(a, b int) int {
 	if a > b {
 		return a
@@ -136,22 +136,19 @@ func ToBase64(src []byte) string {
 	return w.String()
 }
 
-// FixedXor takes two buffers, [a] and [b], of equal size encoded in hex and
-// returns a new buffer where every byte in [a] is xorred with the corresponding
-// byte in [b].
-func FixedXor(a string, b string) string {
-	first := FromHex(a)
-	second := FromHex(b)
+// FixedXor takes two buffers, a and b, of equal size encoded in hex and
+// returns a new buffer where every byte in a is xorred with the corresponding
+// byte in b.
+func FixedXor(a []byte, b []byte) []byte {
+	assertf(len(a) == len(b), "FixedXOR(): Both buffers most be same size\n")
 
-	assertf(len(first) == len(second), "FixedXOR(): Both buffers most be same size\n")
+	w := make([]byte, len(a))
 
-	w := make([]byte, len(first))
-
-	for i := 0; i < len(first); i++ {
-		w[i] = first[i] ^ second[i]
+	for i := 0; i < len(a); i++ {
+		w[i] = a[i] ^ b[i]
 	}
 
-	return ToHex(w)
+	return w
 }
 
 // FreqTable is a data structure representing a table of bytes to frequency which is used
@@ -162,7 +159,7 @@ type FreqTable struct {
 	table map[byte]float64
 }
 
-// BuildFreqTable creates a new frequency table based on the text in [corpus].
+// BuildFreqTable creates a new frequency table based on the text in corpus.
 func BuildFreqTable(corpus string) *FreqTable {
 	r := &FreqTable{table: map[byte]float64{}}
 	n := len(corpus)
@@ -178,7 +175,7 @@ func BuildFreqTable(corpus string) *FreqTable {
 	return r
 }
 
-// score assigns a numerical score to [text] by using the internal frequency table.
+// score assigns a numerical score to text by using the internal frequency table.
 func (f *FreqTable) score(text []byte) float64 {
 	score := 0.0
 
@@ -189,7 +186,7 @@ func (f *FreqTable) score(text []byte) float64 {
 	return score
 }
 
-// xor returns a string where every byte in [a] has been xorred with [b].
+// xor returns a string where every byte in a has been xorred with b.
 func (f *FreqTable) xor(a []byte, b byte) []byte {
 	w := make([]byte, len(a))
 
@@ -202,16 +199,14 @@ func (f *FreqTable) xor(a []byte, b byte) []byte {
 
 // XorDecrypt decrypts the given string by trying an exhaustive single-byte xor
 // and using the scoring from the frequency table to decide which byte it is.
-func (f *FreqTable) XorDecrypt(ciphertext string) (string, byte, float64) {
-	c := FromHex(ciphertext)
-
-	s := c
+func (f *FreqTable) XorDecrypt(ciphertext []byte) ([]byte, byte, float64) {
+	s := ciphertext
 	b := byte(0)
 	t := f.score(s)
 
 	for i := 0x01; i < 0x100; i++ {
 		bb := byte(i)
-		ss := f.xor(c, bb)
+		ss := f.xor(ciphertext, bb)
 		tt := f.score(ss)
 
 		if tt > t {
@@ -221,5 +216,5 @@ func (f *FreqTable) XorDecrypt(ciphertext string) (string, byte, float64) {
 		}
 	}
 
-	return ToHex(s), b, t
+	return s, b, t
 }
