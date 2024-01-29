@@ -12,7 +12,7 @@ import (
 var AliceCorpus []byte
 
 //go:embed data/data1D.txt
-var Data1D string
+var TestData1D string
 
 func TestConvert1A(t *testing.T) {
 	var (
@@ -83,7 +83,7 @@ func TestDetectSingleByteXor1D(t *testing.T) {
 
 	lines := make([][]byte, 327)
 
-	for i, line := range strings.Split(Data1D, "\n") {
+	for i, line := range strings.Split(TestData1D, "\n") {
 		lines[i] = FromHex(line)
 	}
 
