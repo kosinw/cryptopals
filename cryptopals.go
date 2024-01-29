@@ -22,8 +22,8 @@ func assertf(cond bool, fmt string, args ...interface{}) {
 	}
 }
 
-// isASCII checks if s is an ASCII-encoded string.
-func isASCII(s string) bool {
+// isascii checks if s is an ASCII-encoded string.
+func isascii(s string) bool {
 	for i := 0; i < len(s); i++ {
 		if s[i] > '\u007f' {
 			return false
@@ -33,8 +33,8 @@ func isASCII(s string) bool {
 	return true
 }
 
-// fromHexDigit converts a single base-16 digit (ASCII) to an integer.
-func fromHexDigit(digit byte) int {
+// hexdigit converts a single base-16 digit (ASCII) to an integer.
+func hexdigit(digit byte) int {
 	switch {
 	case digit >= '0' && digit <= '9':
 		return int(digit - '0')
@@ -50,7 +50,7 @@ func fromHexDigit(digit byte) int {
 
 // FromHex converts a hex-encoded string into a byte slice.
 func FromHex(hex string) []byte {
-	assertf(isASCII(hex), "FromHex(): Expected \"%v\" to be ASCII-encoded", hex[:16])
+	assertf(isascii(hex), "FromHex(): Expected \"%v\" to be ASCII-encoded", hex[:16])
 	assertf(len(hex)%2 == 0, "FromHex(): Expected \"%v\" to be even length, instead was length %v", hex[:16], len(hex))
 
 	r := strings.NewReader(hex)
@@ -63,7 +63,7 @@ func FromHex(hex string) []byte {
 		first, _ := r.ReadByte()
 		second, _ := r.ReadByte()
 
-		X := byte(16*fromHexDigit(first) + fromHexDigit(second))
+		X := byte(16*hexdigit(first) + hexdigit(second))
 		w.WriteByte(X)
 	}
 
@@ -98,8 +98,6 @@ func ToHex(data []byte) string {
 
 // ToBase64 converts a raw byte slice into the standard base64 encoding described in RFC 4648.
 func ToBase64(src []byte) string {
-	// alphabet contains all of the characters of the base64 alphabet.
-	// Each "digit" in base64 is 6-bits wide (making a grand total of 64 letters in our alphabet).
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWYXZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 	r := bytes.NewReader(src)
@@ -238,4 +236,15 @@ func (f *FreqTable) DetectEncryptedLine(ciphertexts [][]byte) ([]byte, byte, flo
 	}
 
 	return plaintext, key, score
+}
+
+// RepeatingXor encrypts plaintext using a repeating-key XOR with key.
+func RepeatingXor(plaintext []byte, key []byte) []byte {
+	w := make([]byte, len(plaintext))
+
+	for i := 0; i < len(plaintext); i++ {
+		w[i] = plaintext[i] ^ key[i%len(key)]
+	}
+
+	return w
 }
