@@ -145,12 +145,81 @@ func FixedXor(a string, b string) string {
 
 	assertf(len(first) == len(second), "FixedXOR(): Both buffers most be same size\n")
 
-	w := new(bytes.Buffer)
-	w.Grow(len(first))
+	w := make([]byte, len(first))
 
 	for i := 0; i < len(first); i++ {
-		w.WriteByte(first[i] ^ second[i])
+		w[i] = first[i] ^ second[i]
 	}
 
-	return ToHex(w.Bytes())
+	return ToHex(w)
+}
+
+// FreqTable is a data structure representing a table of bytes to frequency which is used
+// for [frequency analysis].
+//
+// [frequency analysis]: https://en.wikipedia.org/wiki/Frequency_analysis
+type FreqTable struct {
+	table map[byte]float64
+}
+
+// BuildFreqTable creates a new frequency table based on the text in [corpus].
+func BuildFreqTable(corpus string) *FreqTable {
+	r := &FreqTable{table: map[byte]float64{}}
+	n := len(corpus)
+
+	for i := 0; i < n; i++ {
+		r.table[corpus[i]] += 1.0
+	}
+
+	for k, v := range r.table {
+		r.table[k] = v / float64(n)
+	}
+
+	return r
+}
+
+// score assigns a numerical score to [text] by using the internal frequency table.
+func (f *FreqTable) score(text []byte) float64 {
+	score := 0.0
+
+	for i := 0; i < len(text); i++ {
+		score += f.table[text[i]]
+	}
+
+	return score
+}
+
+// xor returns a string where every byte in [a] has been xorred with [b].
+func (f *FreqTable) xor(a []byte, b byte) []byte {
+	w := make([]byte, len(a))
+
+	for i := 0; i < len(a); i++ {
+		w[i] = a[i] ^ b
+	}
+
+	return w
+}
+
+// XorDecrypt decrypts the given string by trying an exhaustive single-byte xor
+// and using the scoring from the frequency table to decide which byte it is.
+func (f *FreqTable) XorDecrypt(ciphertext string) (string, byte, float64) {
+	c := FromHex(ciphertext)
+
+	s := c
+	b := byte(0)
+	t := f.score(s)
+
+	for i := 0x01; i < 0x100; i++ {
+		bb := byte(i)
+		ss := f.xor(c, bb)
+		tt := f.score(ss)
+
+		if tt > t {
+			s = ss
+			b = bb
+			t = tt
+		}
+	}
+
+	return ToHex(s), b, t
 }
