@@ -50,8 +50,8 @@ func fromHexDigit(digit byte) int {
 
 // FromHex converts a hex-encoded string into a byte slice.
 func FromHex(hex string) []byte {
-	assertf(isASCII(hex), "Expected \"%v\" to be ASCII-encoded", hex[:16])
-	assertf(len(hex)%2 == 0, "Expected \"%v\" to be even length, instead was length %v", hex[:16], len(hex))
+	assertf(isASCII(hex), "FromHex(): Expected \"%v\" to be ASCII-encoded", hex[:16])
+	assertf(len(hex)%2 == 0, "FromHex(): Expected \"%v\" to be even length, instead was length %v", hex[:16], len(hex))
 
 	r := strings.NewReader(hex)
 	w := new(bytes.Buffer)
@@ -70,26 +70,49 @@ func FromHex(hex string) []byte {
 	return w.Bytes()
 }
 
+// ToHex converts from a byte slice to a hex-encoded string.
+func ToHex(data []byte) string {
+	const alphabet = "0123456789abcdef"
+
+	r := bytes.NewReader(data)
+	w := new(strings.Builder)
+
+	w.Grow(len(data) * 2)
+
+	for r.Len() > 0 {
+		x, err := r.ReadByte()
+
+		if err != nil {
+			panic(err)
+		}
+
+		a := x & 0x0F
+		b := (x >> 4) & 0x0F
+
+		w.WriteByte(alphabet[b])
+		w.WriteByte(alphabet[a])
+	}
+
+	return w.String()
+}
+
 // ToBase64 converts a raw byte slice into the standard base64 encoding described in RFC 4648.
 func ToBase64(src []byte) string {
 	// alphabet contains all of the characters of the base64 alphabet.
 	// Each "digit" in base64 is 6-bits wide (making a grand total of 64 letters in our alphabet).
-	const (
-		alphabet     = "ABCDEFGHIJKLMNOPQRSTUVWYXZabcdefghijklmnopqrstuvwxyz0123456789+/"
-		maxgroupsize = 3
-	)
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWYXZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 	r := bytes.NewReader(src)
 	w := new(strings.Builder)
 
 	// Every 4 bytes uses 3 letters from alphabet (also take into account potential padding)
-	w.Grow((3 * (len(src) + 1)) / 4)
+	w.Grow(len(src) * 4 / 3)
 
 	for r.Len() > 0 {
 		var groupsize int
 		var group int
 
-		for i := 0; i < maxgroupsize; i++ {
+		for i := 0; i < 3; i++ {
 			c, err := r.ReadByte()
 
 			group = group << 8
@@ -100,18 +123,34 @@ func ToBase64(src []byte) string {
 			}
 		}
 
-		// Add non-padding bytes
 		for j := 1; j <= groupsize+1; j++ {
 			digit := (group >> ((4 - j) * 6)) & 0x3F
 			w.WriteByte(alphabet[digit])
 		}
 
-		// Groupsize must either be 1, 2, or 3 since the outerloop would have seized
-		// Add padding
-		for k := 0; k < (maxgroupsize - groupsize); k++ {
+		for k := 0; k < (3 - groupsize); k++ {
 			w.WriteByte('=')
 		}
 	}
 
 	return w.String()
+}
+
+// FixedXor takes two buffers, [a] and [b], of equal size encoded in hex and
+// returns a new buffer where every byte in [a] is xorred with the corresponding
+// byte in [b].
+func FixedXor(a string, b string) string {
+	first := FromHex(a)
+	second := FromHex(b)
+
+	assertf(len(first) == len(second), "FixedXOR(): Both buffers most be same size\n")
+
+	w := new(bytes.Buffer)
+	w.Grow(len(first))
+
+	for i := 0; i < len(first); i++ {
+		w.WriteByte(first[i] ^ second[i])
+	}
+
+	return ToHex(w.Bytes())
 }
