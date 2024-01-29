@@ -160,7 +160,7 @@ type FreqTable struct {
 }
 
 // BuildFreqTable creates a new frequency table based on the text in corpus.
-func BuildFreqTable(corpus string) *FreqTable {
+func BuildFreqTable(corpus []byte) *FreqTable {
 	r := &FreqTable{table: map[byte]float64{}}
 	n := len(corpus)
 
@@ -217,4 +217,25 @@ func (f *FreqTable) XorDecrypt(ciphertext []byte) ([]byte, byte, float64) {
 	}
 
 	return s, b, t
+}
+
+// DetectEncryptedLine finds the XOR encrypted line given a slice of lines.
+func (f *FreqTable) DetectEncryptedLine(ciphertexts [][]byte) ([]byte, byte, float64) {
+	if len(ciphertexts) == 0 {
+		return nil, 0, 0.0
+	}
+
+	plaintext, key, score := f.XorDecrypt(ciphertexts[0])
+
+	for i := 1; i < len(ciphertexts); i++ {
+		pp, kk, ss := f.XorDecrypt(ciphertexts[i])
+
+		if ss > score {
+			plaintext = pp
+			key = kk
+			score = ss
+		}
+	}
+
+	return plaintext, key, score
 }

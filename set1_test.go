@@ -3,27 +3,31 @@ package cryptopals
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
 
 //go:embed data/alice.txt
-var AliceCorpus string
+var AliceCorpus []byte
+
+//go:embed data/data1D.txt
+var Data1D string
 
 func TestConvert1A(t *testing.T) {
 	var (
-		in  = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d"
-		out = "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
+		a = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d"
+		b = "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
 	)
 
 	t0 := time.Now()
 
 	fmt.Printf("Test (1A): convert hex to base64 ...\n")
 
-	actual := ToBase64(FromHex(in))
+	actual := ToBase64(FromHex(a))
 
-	if actual != out {
-		t.Errorf("\nexpected: %v\nactual  : %v\n", out, actual)
+	if actual != b {
+		t.Errorf("\nexpected: %v\nactual  : %v\n", b, actual)
 	}
 
 	fmt.Printf("  ... Passed -- %v\n", time.Since(t0))
@@ -64,6 +68,31 @@ func TestSingleByteXor1C(t *testing.T) {
 
 	if actual != b {
 		t.Errorf("\nexpected: %v\nactual  : %v\n", b, actual)
+	}
+
+	fmt.Printf("  ... Passed -- %v\n", time.Since(t0))
+}
+
+func TestDetectSingleByteXor1D(t *testing.T) {
+	var (
+		a = "4e6f77207468617420746865207061727479206973206a756d70696e670a"
+	)
+
+	t0 := time.Now()
+	fmt.Printf("Test (1D): detect single-byte XOR ...\n")
+
+	lines := make([][]byte, 327)
+
+	for i, line := range strings.Split(Data1D, "\n") {
+		lines[i] = FromHex(line)
+	}
+
+	f := BuildFreqTable(AliceCorpus)
+	plaintext, _, _ := f.DetectEncryptedLine(lines)
+	actual := ToHex(plaintext)
+
+	if actual != a {
+		t.Errorf("\nexpected: %v\nactual  : %v\n", a, actual)
 	}
 
 	fmt.Printf("  ... Passed -- %v\n", time.Since(t0))
