@@ -14,6 +14,9 @@ var AliceCorpus []byte
 //go:embed data/data1D.txt
 var TestData1D string
 
+// go:embed data/data1F.txt
+var TestData1F string
+
 func TestConvert1A(t *testing.T) {
 	var (
 		a = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d"
@@ -113,6 +116,58 @@ func TestRepeatingXor1E(t *testing.T) {
 	if actual != b {
 		t.Errorf("\nexpected: %v\nactual  : %v\n", b, actual)
 	}
+
+	fmt.Printf("  ... Passed -- %v\n", time.Since(t0))
+}
+
+func TestHammingDistance1F(t *testing.T) {
+	var (
+		a = []byte("this is a test")
+		b = []byte("wokka wokka!!!")
+		c = 37
+	)
+
+	t0 := time.Now()
+	fmt.Printf("Test (1F): hamming distance ...\n")
+
+	actual := Hamming(a, b)
+
+	if actual != c {
+		t.Errorf("\nexpected: %v\nactual  : %v\n", c, actual)
+	}
+
+	fmt.Printf("  ... Passed -- %v\n", time.Since(t0))
+}
+
+func TestBase64Decode1F(t *testing.T) {
+	var (
+		a = "dGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUgbGF6eSBkb2chIQ=="
+		b = "the quick brown fox jumped over the lazy dog!!"
+	)
+
+	t0 := time.Now()
+	fmt.Printf("Test (1F): base64 decode ...\n")
+
+	r := FromBase64(a)
+	actual := string(r)
+
+	if actual != b {
+		t.Errorf("\nexpected: %v\nactual  : %v\n", b, actual)
+	}
+
+	fmt.Printf("  ... Passed -- %v\n", time.Since(t0))
+}
+
+func TestBreakRepeatingXor1F(t *testing.T) {
+
+	t0 := time.Now()
+	fmt.Printf("Test (1F): break repeating XOR ...\n")
+
+	f := BuildFreqTable(AliceCorpus)
+	r := FromBase64(TestData1F)
+	plaintext, key, score := f.BreakRepeatingXor(r)
+
+	fmt.Printf("plaintext: %v\nkey: %v\nscore: %v\n", plaintext, key, score)
 
 	fmt.Printf("  ... Passed -- %v\n", time.Since(t0))
 }

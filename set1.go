@@ -2,9 +2,12 @@ package cryptopals
 
 import (
 	"bytes"
+	"errors"
 	"log"
 	"strings"
 )
+
+var ErrWrongBlockSize = errors.New("Wrong block size read")
 
 // max returns the greater of the two numbers between a and b.
 func max(a, b int) int {
@@ -71,13 +74,13 @@ func FromHex(hex string) []byte {
 }
 
 // ToHex converts from a byte slice to a hex-encoded string.
-func ToHex(data []byte) string {
+func ToHex(src []byte) string {
 	const alphabet = "0123456789abcdef"
 
-	r := bytes.NewReader(data)
+	r := bytes.NewReader(src)
 	w := new(strings.Builder)
 
-	w.Grow(len(data) * 2)
+	w.Grow(len(src) * 2)
 
 	for r.Len() > 0 {
 		x, err := r.ReadByte()
@@ -132,6 +135,68 @@ func ToBase64(src []byte) string {
 	}
 
 	return w.String()
+}
+
+// base64 converts a single base-64 digit to an integer.
+func base64digit(d byte) int {
+	switch {
+	case d >= 'A' && d <= 'Z':
+		return int(d - 'A')
+	case d >= 'a' && d <= 'z':
+		return int(d-'a') + 26
+	case d >= '0' && d <= '9':
+		return int(d-'0') + 52
+	case d == '+':
+		return 62
+	case d == '/':
+		return 63
+	default:
+		log.Fatalf("Trying to convert non-base64 digit: %v", d)
+		return -1
+	}
+}
+
+// FromBase64 converts a base64 encoded string into a byte slice.
+func FromBase64(src string) []byte {
+	assertf(len(src)%4 == 0, "FromBase64(): Encoded string must be a multiple of 4")
+
+	r := strings.NewReader(src)
+	w := new(bytes.Buffer)
+
+	// Every 3 letters corresponds to 4 bytes
+	w.Grow(len(src) * 3 / 4)
+
+	for r.Len() > 0 {
+		var data [4]byte
+		var group int
+		var groupsize int
+
+		n, err := r.Read(data[:])
+
+		if n != 4 {
+			err = ErrWrongBlockSize
+		}
+
+		assertf(err == nil, "FromBase64(): Error decoding string: %v", err)
+
+		for i := 1; i <= 4; i++ {
+			if data[i-1] == '=' {
+				break
+			}
+
+			shift := (4 - i) * 6
+			group |= base64digit(data[i-1]) << shift
+			groupsize++
+		}
+
+		for j := 1; j <= groupsize-1; j++ {
+			shift := (3 - j) * 8
+			b := (group >> shift) & 0xFF
+			w.WriteByte(byte(b))
+		}
+	}
+
+	return w.Bytes()
 }
 
 // FixedXor takes two buffers, a and b, of equal size encoded in hex and
@@ -238,6 +303,11 @@ func (f *FreqTable) DetectEncryptedLine(ciphertexts [][]byte) ([]byte, byte, flo
 	return plaintext, key, score
 }
 
+// BreakRepeatingXor breaks a repeating XOR cipher by using frequency analysis methods.
+func (f *FreqTable) BreakRepeatingXor(ciphertext []byte) (plaintext []byte, key []byte, score float64) {
+	return
+}
+
 // RepeatingXor encrypts plaintext using a repeating-key XOR with key.
 func RepeatingXor(plaintext []byte, key []byte) []byte {
 	w := make([]byte, len(plaintext))
@@ -247,4 +317,24 @@ func RepeatingXor(plaintext []byte, key []byte) []byte {
 	}
 
 	return w
+}
+
+// Hamming computes the [Hamming distance] for the bits between fst and snd.
+//
+// [Hamming distance]: https://en.wikipedia.org/wiki/Hamming_distance
+func Hamming(fst []byte, snd []byte) int {
+	assertf(len(fst) == len(snd), "Hamming(): Expected %v and %v to be same length", len(fst), len(snd))
+
+	distance := 0
+
+	for i := 0; i < len(fst); i++ {
+		l, r := fst[i], snd[i]
+		for j := 0; j < 8; j++ {
+			if ((l >> j) & 0b1) != ((r >> j) & 0b1) {
+				distance += 1
+			}
+		}
+	}
+
+	return distance
 }
